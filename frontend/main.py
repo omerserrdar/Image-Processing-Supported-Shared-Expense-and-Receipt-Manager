@@ -36,17 +36,22 @@ def main(page: ft.Page):
     page.window.height = 900
     page.padding = 0
     page.spacing = 0
+    
+    # TR: Teknik gereksinim: Özel upload URL tanımı
+    # EN: Technical requirement: Custom upload URL definition
+    page.upload_url = "/api/upload"
 
     # --- DOSYA YÜKLEME VE OCR MANTIĞI | FILE UPLOAD & OCR LOGIC ---
     def on_upload_result(e: ft.FilePickerUploadEvent):
         """
-        TR: Dosya sunucuya yüklendiğinde tetiklenen fonksiyon.
-        EN: Function triggered when the file is uploaded to the server.
+        TR: Dosya yükleme ilerlemesini ve tamamlanmasını yönetir.
+        EN: Manages file upload progress and completion.
         """
-        print(f"DEBUG: Yükleme olayı - Dosya: {e.file_name}, İlerleme: {e.progress}")
-        # TR: Sadece yükleme tamamlandığında (%100) işlem yap
-        # EN: Process only when upload is complete (100%)
+        # TR: Yükleme yüzdesini SnackBar ile göster
+        # EN: Show upload percentage with SnackBar
         if e.progress < 1.0:
+            page.overlay.append(ft.SnackBar(ft.Text(f"Yükleniyor: %{int(e.progress * 100)} - {e.file_name}"), open=True))
+            page.update()
             return
             
         file_path = os.path.join(os.path.abspath("uploads"), e.file_name)
