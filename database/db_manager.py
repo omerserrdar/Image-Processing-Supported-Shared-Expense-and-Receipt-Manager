@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from datetime import datetime
+import pandas as pd
 
 class DatabaseManager:
     """
@@ -150,3 +151,19 @@ class DatabaseManager:
         
         conn.close()
         return {"total": total, "count": count, "distribution": category_dist}
+
+    def get_analytics_df(self):
+        """
+        TR: Veritabanındaki fiş ve kategori verilerini Pandas DataFrame olarak döndürür.
+        EN: Returns the receipt and category data from the database as a Pandas DataFrame.
+        """
+        conn = self.get_connection()
+        query = '''
+            SELECT r.id, r.receipt_date, r.store_name, r.total_amount, c.name as category_name, c.color_code
+            FROM receipts r
+            JOIN categories c ON r.category_id = c.id
+        '''
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        return df
+

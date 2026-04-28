@@ -1,6 +1,7 @@
 import flet as ft
 import os
 import sys
+import pandas as pd
 
 # TR: Proje ana dizinine erişim sağlayarak arka plan modüllerini yükle
 # EN: Access project root directory to load backend modules
@@ -38,6 +39,21 @@ def main(page: ft.Page):
     last_receipt_store = ft.Text("Henüz Veri Yok", size=14, color=Style.OUTLINE)
     last_receipt_total = ft.Text("$0.00", size=32, weight=ft.FontWeight.BOLD, color=Style.SECONDARY)
     last_receipt_date = ft.Text("-", size=18, weight=ft.FontWeight.BOLD)
+    
+    # Dinamik Kategori Dağılımı Referansı
+    category_list_column = ft.Column(spacing=20)
+
+    # Dinamik Harcama Trend Grafiği (Pandas ile beslenecek)
+    expense_chart = ft.BarChart(
+        bar_groups=[],
+        border=ft.border.all(1, ft.colors.with_opacity(0.1, "white")),
+        left_axis=ft.ChartAxis(labels_size=40),
+        bottom_axis=ft.ChartAxis(labels_size=40),
+        horizontal_grid_lines=ft.ChartGridLines(color=ft.colors.with_opacity(0.05, "white"), width=1, dash_pattern=[3, 3]),
+        tooltip_bgcolor=ft.colors.with_opacity(0.8, Style.BG),
+        max_y=1000,
+        interactive=True,
+    )
 
     receipts_table = ft.DataTable(
         columns=[
@@ -58,6 +74,60 @@ def main(page: ft.Page):
             total_spent_text.value = f"${stats['total']:,.2f}"
             scan_count_text.value = str(stats['count'])
             
+            # PANDAS İLE GRAFİK VERİSİ İŞLEME (Günlük Harcama Trendi)
+            df = db.get_analytics_df()
+            if not df.empty:
+                # TR: Tarihi pandas datetime nesnesine çevir ve geçersizleri at (NaT)
+                df['receipt_date'] = pd.to_datetime(df['receipt_date'], errors='coerce')
+                df = df.dropna(subset=['receipt_date'])
+                
+                # Günlük bazda toplam tutarı grupla
+                daily_df = df.groupby(df['receipt_date'].dt.date)['total_amount'].sum().reset_index()
+                daily_df = daily_df.sort_values('receipt_date')
+                
+                # Grafiği güncelle
+                bar_groups = []
+                labels = []
+                max_y = 0
+                for i, row in daily_df.iterrows():
+                    val = float(row['total_amount'])
+                    if val > max_y: max_y = val
+                    
+                    # Çubuk (Bar) oluştur
+                    bar_groups.append(
+                        ft.BarChartGroup(
+                            x=i,
+                            bar_rods=[ft.BarChartRod(from_y=0, to_y=val, width=15, color=Style.PRIMARY, tooltip=f"{row['receipt_date']}\n{val:.2f} TL")],
+                        )
+                    )
+                    # Alt eksen etiketi oluştur (Örn: 20 Haz)
+                    date_str = row['receipt_date'].strftime('%d %b')
+                    labels.append(ft.ChartAxisLabel(value=i, label=ft.Container(ft.Text(date_str, size=9, color=Style.OUTLINE), padding=2)))
+                
+                expense_chart.bar_groups = bar_groups
+                expense_chart.bottom_axis.labels = labels
+                expense_chart.max_y = max_y * 1.2 if max_y > 0 else 1000
+
+                # PANDAS İLE KATEGORİ DAĞILIMI
+                cat_df = df.groupby('category_name').agg({'total_amount':'sum', 'color_code':'first'}).reset_index()
+                total_cat_sum = cat_df['total_amount'].sum()
+                
+                cat_controls = []
+                for _, crow in cat_df.sort_values('total_amount', ascending=False).iterrows():
+                    cat_name = crow['category_name']
+                    cat_val = float(crow['total_amount'])
+                    cat_color = crow['color_code'] if pd.notna(crow['color_code']) else Style.PRIMARY
+                    percentage = cat_val / total_cat_sum if total_cat_sum > 0 else 0
+                    
+                    cat_controls.append(
+                        ft.Row([
+                            ft.Text(f"{cat_name} (%{int(percentage*100)})", size=12, width=120),
+                            ft.ProgressBar(value=percentage, color=cat_color, bgcolor=ft.colors.with_opacity(0.1, "white"), expand=True),
+                            ft.Text(f"${cat_val:.2f}", size=12, weight=ft.FontWeight.BOLD)
+                        ])
+                    )
+                category_list_column.controls = cat_controls
+
             # Tabloyu güncelle
             rows = db.get_all_receipts()
             print(f"DEBUG: Toplam {len(rows)} fiş bulundu.")
@@ -170,8 +240,8 @@ def main(page: ft.Page):
             ft.Container(
                 **Style.GLASS_STYLE, expand=2, padding=32, border_radius=32,
                 content=ft.Column([
-                    ft.Text("Harcama Trendleri", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Container(height=250, content=ft.Text("Grafik verileri yükleniyor...", color=Style.OUTLINE, text_align=ft.TextAlign.CENTER))
+                    ft.Text("Günlük Harcama Trendi", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Container(height=250, padding=ft.Padding(0, 20, 0, 0), content=expense_chart)
                 ])
             ),
             ft.Container(
@@ -187,6 +257,20 @@ def main(page: ft.Page):
         ft.Row([
             InsightCard("Lisans Çakışması", "Ekipler arasında mükerrer Adobe lisansı tespit edildi.", ft.icons.REPEAT, Style.PRIMARY),
             InsightCard("Yemek Harcaması", "Geçen aya göre %18 artış.", ft.icons.TRENDING_UP, Style.SECONDARY),
+        ], spacing=25),
+
+        # Kategori Dağılımı ve Ek Özellikler
+        ft.Row([
+            ft.Container(
+                **Style.GLASS_STYLE, expand=1, padding=32, border_radius=32,
+                content=ft.Column([
+                    ft.Text("Kategorik Dağılım", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Container(height=10),
+                    category_list_column
+                ])
+            ),
+            # Boş veya Liderlik tablosu için yer tutucu
+            ft.Container(expand=1)
         ], spacing=25)
     ], expand=True, spacing=40)
 
