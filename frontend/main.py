@@ -2,6 +2,11 @@ import flet as ft
 import os
 import sys
 import pandas as pd
+import cv2
+import threading
+import numpy as np
+
+os.environ["FLET_SECRET_KEY"] = "ipt_ocr_secure_key_123"
 
 # TR: Proje ana dizinine erişim sağlayarak arka plan modüllerini yükle
 # EN: Access project root directory to load backend modules
@@ -12,10 +17,12 @@ from database.db_manager import DatabaseManager
 from receipt_parser import ReceiptParser
 from paddleocr import PaddleOCR
 
-# --- GLOBAL NESNELER ---
+# --- GLOBAL NESNELER | GLOBAL OBJECTS ---
+# TR: OCR motorunu ve veritabanı yöneticisini uygulama genelinde kullanmak için başlatıyoruz.
+# EN: Initializing the OCR engine and database manager for application-wide use.
 ocr_engine = PaddleOCR(use_textline_orientation=True, lang="tr", enable_mkldnn=False)
 receipt_parser = ReceiptParser()
-db = DatabaseManager() # Veritabanını başlat
+db = DatabaseManager() # Veritabanını başlat | Initialize database
 
 
 def main(page: ft.Page):
@@ -29,6 +36,85 @@ def main(page: ft.Page):
     page.window.height = 900
     page.padding = 0
     page.spacing = 0
+
+    # --- DOSYA YÜKLEME VE OCR MANTIĞI | FILE UPLOAD & OCR LOGIC ---
+    def on_upload_result(e: ft.FilePickerUploadEvent):
+        """
+        TR: Dosya sunucuya yüklendiğinde tetiklenen fonksiyon.
+        EN: Function triggered when the file is uploaded to the server.
+        """
+        print(f"DEBUG: Yükleme olayı - Dosya: {e.file_name}, İlerleme: {e.progress}")
+        # TR: Sadece yükleme tamamlandığında (%100) işlem yap
+        # EN: Process only when upload is complete (100%)
+        if e.progress < 1.0:
+            return
+            
+        file_path = os.path.join(os.path.abspath("uploads"), e.file_name)
+        print(f"DEBUG: Yükleme tamamlandı, dosya yolu: {file_path}")
+        
+        # Modern SnackBar Kullanımı
+        page.overlay.append(ft.SnackBar(ft.Text("Fiş analiz ediliyor, lütfen bekleyin..."), open=True))
+        page.update()
+        
+        def run_ocr_task():
+            """
+            TR: OCR işlemini ve veritabanı kaydını arka planda yürüten alt görev.
+            EN: Background sub-task that executes OCR processing and database recording.
+            """
+            try:
+                print(f"DEBUG: OCR Görevi Başladı - Dosya: {file_path}")
+                # TR: Windows dosya yolları (boşluk/türkçe karakter) için imdecode kullan
+                # EN: Use imdecode for Windows file paths (space/turkish characters)
+                img_array = np.fromfile(file_path, np.uint8)
+                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                
+                if img is None: 
+                    print(f"HATA: Resim decode edilemedi: {file_path}")
+                    raise FileNotFoundError(f"Resim decode edilemedi: {file_path}")
+                
+                print(f"DEBUG: OCR Tahmini Başlıyor... (Görüntü Boyutu: {img.shape})")
+                prediction = ocr_engine.predict(img)
+                print("DEBUG: OCR Tahmini Bitti, Parse Ediliyor...")
+                data = receipt_parser.parse(prediction)
+                print(f"DEBUG: Parse Sonucu: {data}")
+                
+                # TR: Veritabanına kaydet
+                # EN: Save to database
+                store = data.get('store_name', 'Bilinmeyen Mağaza')
+                date = data.get('date', '2026-01-01')
+                if date == "Bulunamadi" or not date: date = "2026-01-01"
+                total = data.get('total_amount', 0.0)
+                
+                db.add_receipt(store, date, total, "Diğer")
+                print("DEBUG: Veritabanına kaydedildi.")
+                
+                # TR: Arayüzü güncelle (Dinamik Grafikler ve Tablo)
+                # EN: Update UI (Dynamic Charts and Table)
+                refresh_ui_data()
+                page.overlay.append(ft.SnackBar(ft.Text(f"Fiş başarıyla eklendi: {store} ({total} TL)"), open=True, bgcolor=Style.PRIMARY))
+            except Exception as ex:
+                print(f"HATA (OCR İşlemi): {ex}")
+                page.overlay.append(ft.SnackBar(ft.Text(f"OCR Hatası: {ex}"), open=True, bgcolor=ft.colors.ERROR))
+            finally:
+                page.update()
+
+        # TR: OCR işlemini arayüzü dondurmamak için ayrı bir thread'de çalıştır
+        # EN: Run OCR in a separate thread to avoid freezing the UI
+        threading.Thread(target=run_ocr_task, daemon=True).start()
+
+    def on_file_picker_result(e: ft.FilePickerResultEvent):
+        if e.files and len(e.files) > 0:
+            file = e.files[0]
+            print(f"DEBUG: Seçilen dosya: {file.name}")
+            upload_url = page.get_upload_url(file.name, 60)
+            print(f"DEBUG: Oluşturulan Upload URL: {upload_url}")
+            file_picker.upload([ft.FilePickerUploadFile(file.name, upload_url=upload_url)])
+            
+            page.overlay.append(ft.SnackBar(ft.Text("Dosya yükleniyor..."), open=True))
+            page.update()
+
+    file_picker = ft.FilePicker(on_result=on_file_picker_result, on_upload=on_upload_result)
+    page.overlay.append(file_picker)
 
     # --- UI REFERANSLARI (Dinamik Güncelleme İçin) ---
     total_spent_text = ft.Text("$0.00", size=32, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
@@ -67,14 +153,17 @@ def main(page: ft.Page):
     )
 
     def refresh_ui_data():
-        """Veritabanındaki güncel verileri çekip arayüzü yeniler"""
+        """
+        TR: Veritabanındaki güncel verileri çekip arayüzü ve grafikleri yeniler.
+        EN: Fetches latest data from the database and refreshes the UI and charts.
+        """
         try:
             print(f"DEBUG: Veritabanı bağlantısı kontrol ediliyor: {db.db_name}")
             stats = db.get_stats()
             total_spent_text.value = f"${stats['total']:,.2f}"
             scan_count_text.value = str(stats['count'])
             
-            # PANDAS İLE GRAFİK VERİSİ İŞLEME (Günlük Harcama Trendi)
+            # --- PANDAS İLE GRAFİK VERİSİ İŞLEME | CHART DATA PROCESSING WITH PANDAS ---
             df = db.get_analytics_df()
             if not df.empty:
                 # TR: Tarihi pandas datetime nesnesine çevir ve geçersizleri at (NaT)
@@ -281,7 +370,7 @@ def main(page: ft.Page):
                 content=ft.Column([
                     ft.Container(content=ft.Icon(ft.icons.CLOUD_UPLOAD, size=40, color=Style.PRIMARY), bgcolor=Style.SURFACE, padding=20, border_radius=40),
                     ft.Text("Fişi Buraya Sürükleyin", size=20, weight=ft.FontWeight.W_600),
-                    ft.ElevatedButton("Dosya Seç", bgcolor=ft.colors.TRANSPARENT, color=Style.PRIMARY)
+                    ft.ElevatedButton("Dosya Seç", bgcolor=ft.colors.TRANSPARENT, color=Style.PRIMARY, on_click=lambda _: file_picker.pick_files(allow_multiple=False, allowed_extensions=["png"]))
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
             ),
             ft.Container(
@@ -302,7 +391,7 @@ def main(page: ft.Page):
     ], spacing=30, scroll=ft.ScrollMode.AUTO)
 
     receipts_view = ft.Column([
-        ft.Row([ft.Text("Fiş Kayıtları", size=28, weight=ft.FontWeight.W_800), ft.ElevatedButton("Yeni Fiş Ekle", icon=ft.icons.ADD, bgcolor=Style.PRIMARY, color=Style.BG)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        ft.Row([ft.Text("Fiş Kayıtları", size=28, weight=ft.FontWeight.W_800), ft.ElevatedButton("Yeni Fiş Ekle", icon=ft.icons.ADD, bgcolor=Style.PRIMARY, color=Style.BG, on_click=lambda _: file_picker.pick_files(allow_multiple=False, allowed_extensions=["png"]))], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
         ft.Container(**Style.GLASS_STYLE, padding=24, border_radius=32, content=receipts_table)
     ], spacing=20, scroll=ft.ScrollMode.AUTO)
 
@@ -351,4 +440,7 @@ def main(page: ft.Page):
     route_change("analytics")
 
 if __name__ == '__main__':
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8550, upload_dir="uploads")
+    upload_path = os.path.abspath("uploads")
+    if not os.path.exists(upload_path):
+        os.makedirs(upload_path)
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8550, upload_dir=upload_path)
