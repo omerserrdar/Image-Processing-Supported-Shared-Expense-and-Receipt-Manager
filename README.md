@@ -1,1 +1,0 @@
-# Image-Processing-Supported-Shared-Expense-and-Receipt-Manager
