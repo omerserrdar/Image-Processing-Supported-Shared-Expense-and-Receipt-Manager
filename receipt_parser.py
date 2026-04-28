@@ -42,8 +42,10 @@ class ReceiptParser:
 
     def _merge_lines_from_predict(self, res):
         """
-        predict() sonucundaki dt_polys ve rec_texts listelerini kullanarak 
-        metinleri satirlara dizer.
+        TR: predict() sonucundaki dt_polys ve rec_texts listelerini kullanarak 
+            metinleri aynı Y koordinatına (dikey eksen) göre satırlara dizer.
+        EN: Uses the dt_polys and rec_texts lists from the predict() output 
+            to align texts into lines based on their Y coordinate (vertical axis).
         """
         if "dt_polys" not in res or "rec_texts" not in res:
             return []
@@ -51,7 +53,8 @@ class ReceiptParser:
         polys = res["dt_polys"]
         texts = res["rec_texts"]
         
-        # Verileri kolay islemek icin bir araya getirip Y koordinatina gore sirala
+        # TR: Verileri kolay işlemek için bir araya getirip Y koordinatına göre (yukarıdan aşağıya) sırala
+        # EN: Group the data together and sort by Y coordinate (top to bottom) for easier processing
         items = []
         for i in range(len(texts)):
             # polys[i][0][1] sol üst kosenin Y koordinatidir
@@ -59,7 +62,8 @@ class ReceiptParser:
             x_left = polys[i][0][0]
             items.append({'y': y_top, 'x': x_left, 'text': texts[i]})
         
-        # Y'ye gore sirala (YUKARIDAN ASAGI)
+        # TR: Tüm elemanları Y eksenine göre (YUKARIDAN AŞAĞIYA) sırala
+        # EN: Sort all items based on the Y axis (TOP TO BOTTOM)
         items.sort(key=lambda x: x['y'])
         
         lines = []
@@ -70,11 +74,13 @@ class ReceiptParser:
 
         for i in range(1, len(items)):
             item = items[i]
-            # Eger mevcut satirimizla dikey mesafe esik icindeyse ayni satirdir
+            # TR: Eğer mevcut kelime ile satırımız arasındaki dikey mesafe eşik (y_threshold) içindeyse aynı satırdadır
+            # EN: If the vertical distance between the current word and our row is within the threshold, they are on the same row
             if abs(item['y'] - current_y) <= self.y_threshold:
                 current_row.append(item)
             else:
-                # Satiri soldan saga (X'e gore) sirala ve birlestir
+                # TR: Satır değişti. Önceki satırı soldan sağa (X'e göre) sırala ve birleştir
+                # EN: Row changed. Sort the previous row from left to right (based on X) and merge
                 current_row.sort(key=lambda x: x['x'])
                 lines.append(" ".join([it['text'] for it in current_row]))
                 
@@ -89,16 +95,23 @@ class ReceiptParser:
         return lines
 
     def _extract_store_name(self, lines):
-        """Ilk 3 satirdaki en anlamli metni magaza adi olarak secer."""
+        """
+        TR: Fişin ilk 3 satırındaki en anlamlı metni mağaza adı olarak seçer.
+        EN: Selects the most meaningful text in the first 3 lines of the receipt as the store name.
+        """
         for line in lines[:3]:
-            # Sembolleri ve rakamlari temizle, sadece harf kaldi mi bak
+            # TR: İstenmeyen sembolleri ve rakamları temizle, sadece harfler kalsın
+            # EN: Clean unwanted symbols and numbers, keeping only letters
             cleaned = re.sub(r'[^a-zA-Z\sİıĞğÜüŞşÖöçÇ]', '', line).strip()
             if len(cleaned) > 3:
                 return cleaned
         return "Bilinmeyen Magaza"
 
     def _extract_date(self, lines):
-        """Tarih desenlerini arar (GG.AA.YYYY vb.)"""
+        """
+        TR: Tarih desenlerini arar (GG.AA.YYYY, AA/GG/YYYY vb.)
+        EN: Searches for date patterns (DD.MM.YYYY, MM/DD/YYYY etc.)
+        """
         pattern = r'\d{2}[./-]\d{2}[./-]\d{4}'
         for line in lines:
             match = re.search(pattern, line)
@@ -106,20 +119,27 @@ class ReceiptParser:
         return "Bulunamadi"
 
     def _extract_total_amount(self, lines):
-        """Toplam kelimesi gecen satirlardaki en buyuk sayiyi bulur."""
+        """
+        TR: Toplam, tutar gibi kelimelerin geçtiği satırlardaki en büyük sayıyı bulur.
+        EN: Finds the largest number in lines containing keywords like total, amount etc.
+        """
         keywords = ['TOPLAM', 'TUTAR', 'TOTAL', 'TOP', 'TL']
-        # 123.45 veya 1.234,56 formatlari
+        # TR: 123.45 veya 1.234,56 gibi para formatlarını yakalayan regex
+        # EN: Regex to catch currency formats like 123.45 or 1,234.56
         price_regex = r'\d{1,3}(?:[.,]\d{3})*[.,]\d{2}'
         
         vals = []
         for i, line in enumerate(lines):
-            # Anahtar kelime kontrolu
+            # TR: Anahtar kelime (TOPLAM, TUTAR) kontrolü
+            # EN: Keyword (TOTAL, AMOUNT) check
             if any(k in line.upper() for k in keywords):
-                # Bu satir ve bir sonraki satiri birlesik tara
+                # TR: Olası format hataları için bu satırı ve bir sonraki satırı birleşik tara
+                # EN: Scan this line and the next line combined for possible format issues
                 text_to_search = line + (" " + lines[i+1] if i+1 < len(lines) else "")
                 for m in re.findall(price_regex, text_to_search):
                     try:
-                        # Sayiyi float'a cevir (nokta/virgul temizligi)
+                        # TR: Sayıyı ondalıklı (float) formata çevir (nokta/virgül temizliği)
+                        # EN: Convert the number to float format (clean dots/commas)
                         clean_val = m.replace('.', '').replace(',', '.')
                         vals.append(float(clean_val))
                     except: continue

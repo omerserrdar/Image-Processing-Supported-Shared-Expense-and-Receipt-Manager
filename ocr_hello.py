@@ -10,22 +10,27 @@ import cv2
 from paddleocr import PaddleOCR
 from receipt_parser import ReceiptParser
 
-# ── YAPILANDIRMA ──────────────────────────────────────────────────────────
-# enable_mkldnn=False: CPU optimizasyon hatasini kapatir.
+# ── YAPILANDIRMA | CONFIGURATION ─────────────────────────────────────────
+# TR: enable_mkldnn=False: CPU optimizasyon hatasını kapatır.
+# EN: enable_mkldnn=False: Disables CPU optimization to prevent potential errors.
 _ocr_engine = PaddleOCR(use_textline_orientation=True, lang="tr", enable_mkldnn=False)
 _parser = ReceiptParser()
 
 def analyze_receipt(image_path: str):
-    # 1. OpenCV ile goruntuyu oku
+    # TR: 1. OpenCV ile görüntüyü oku
+    # EN: 1. Read the image using OpenCV
     img = cv2.imread(image_path)
     if img is None:
         raise FileNotFoundError(f"Goruntu okunamadi: {image_path}")
 
-    # 2. PaddleOCR ile tahmin yap (Yeni API: predict)
-    # Bu metod dt_polys (koordinatlar) ve rec_texts (metinler) dondurur.
+    # TR: 2. PaddleOCR ile tahmin yap (Yeni API: predict)
+    # TR: Bu metod dt_polys (koordinatlar) ve rec_texts (metinler) döndürür.
+    # EN: 2. Make prediction using PaddleOCR (New API: predict)
+    # EN: This method returns dt_polys (coordinates) and rec_texts (texts).
     prediction = _ocr_engine.predict(img)
 
-    # 3. Parser ile anlamli verileri ayikla
+    # TR: 3. Parser (Ayrıştırıcı) ile anlamlı verileri (tarih, toplam vb.) ayıkla
+    # EN: 3. Extract meaningful data (date, total etc.) using the Parser
     data = _parser.parse(prediction)
     return data
 
@@ -42,14 +47,16 @@ def main():
         
         sonuc = analyze_receipt(dosya)
         
-        # BULUNAN VERI OZETI
+        # TR: BULUNAN VERİ ÖZETİ
+        # EN: FOUND DATA SUMMARY
         print(f"MAGAZA ADI   : {sonuc['store_name']}")
         print(f"TARIH        : {sonuc['date']}")
         print(f"TOPLAM TUTAR : {sonuc['total_amount']:.2f} TL")
         print("-" * 50)
         
-        # TUM SATIRLAR (Siralanmis ve birlestirilmis)
-        print("FIS ICERIGI (BIRLESTIRILMIS):")
+        # TR: TÜM SATIRLAR (Sıralanmış ve birleştirilmiş orijinal içerik)
+        # EN: ALL LINES (Sorted and merged original content)
+        print("FIS ICERIGI (BIRLESTIRILMIS) | RECEIPT CONTENT (MERGED):")
         for i, satir in enumerate(sonuc['raw_lines'], 1):
             print(f" {i:02d} | {satir}")
         
