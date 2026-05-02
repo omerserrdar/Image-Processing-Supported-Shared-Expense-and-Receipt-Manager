@@ -5,3 +5,5 @@ __pycache__/
 *.jpeg
 .idea/
 .vscode/
+receipts.db
+uploads/

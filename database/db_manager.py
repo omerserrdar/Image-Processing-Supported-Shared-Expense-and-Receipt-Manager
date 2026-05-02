@@ -14,8 +14,8 @@ class DatabaseManager:
         TR: Veritabanı bağlantısını başlatır ve tabloları oluşturur.
         EN: Initializes the database connection and creates tables.
         """
-        # Projenin kök dizinini bul ve veritabanını oraya sabitle
-        # Find project root and fix the database path there
+        # TR: Projenin kök dizinini bul ve veritabanını oraya sabitle
+        # EN: Find project root and fix the database path there
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.db_name = os.path.join(base_dir, db_name)
         self.init_db()
@@ -66,17 +66,17 @@ class DatabaseManager:
         if cursor.fetchone()[0] == 0:
             categories = [
                 ('Market', '#10b981'),      # Market - Green
-                ('Elektronik', '#6366f1'),  # Electronics - Indigo
-                ('Seyahat', '#f59e0b'),     # Travel - Amber
-                ('Yemek', '#f43f5e'),       # Food - Rose
-                ('Diğer', '#94a3b8')        # Other - Slate
+                ('Electronics', '#6366f1'), # Electronics - Indigo
+                ('Travel', '#f59e0b'),      # Travel - Amber
+                ('Food', '#f43f5e'),        # Food - Rose
+                ('Other', '#94a3b8')         # Other - Slate
             ]
             cursor.executemany("INSERT INTO categories (name, color_code) VALUES (?, ?)", categories)
 
         conn.commit()
         conn.close()
 
-    def add_receipt(self, store_name, date, amount, category_name="Diğer", image_path=""):
+    def add_receipt(self, store_name, date, amount, category_name="Other", image_path=""):
         """
         TR: Veritabanına yeni bir fiş kaydı ekler.
         EN: Adds a new receipt record to the database.
@@ -91,12 +91,13 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # TR: Verilen kategori adına göre ID'yi bul. Bulamazsa varsayılanı (Diğer) kullan.
+        # TR: Verilen kategori adına göre ID'yi bul. Bulamazsa varsayılanı (Other) kullan.
         # EN: Find ID based on category name. Use default (Other) if not found.
         cursor.execute("SELECT id FROM categories WHERE name = ?", (category_name,))
         res = cursor.fetchone()
         category_id = res[0] if res else 5 
 
+        # TR: Şu anki zamanı al | EN: Get current timestamp
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         cursor.execute('''
@@ -166,4 +167,15 @@ class DatabaseManager:
         df = pd.read_sql_query(query, conn)
         conn.close()
         return df
+
+    def delete_receipt(self, receipt_id):
+        """
+        TR: Verilen ID'ye sahip fiş kaydını siler.
+        EN: Deletes the receipt record with the given ID.
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM receipts WHERE id = ?", (receipt_id,))
+        conn.commit()
+        conn.close()
 
