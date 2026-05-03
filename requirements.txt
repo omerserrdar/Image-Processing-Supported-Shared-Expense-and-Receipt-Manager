@@ -1,5 +1,28 @@
-paddlepaddle>=3.0
-paddleocr>=2.9
-opencv-python>=4.10
+# ReceiptShare v2 — Dependencies
+# Install: pip install -r requirements.txt
+
+# --- Core Framework ---
+nicegui>=2.15
+python-multipart>=0.0.9
+
+# --- AI & Vision ---
+google-genai>=1.0
+
+# --- Database ---
+pymongo>=4.7
+
+# --- Authentication ---
+passlib[bcrypt]>=1.7
+
+# --- Barcode Generation ---
+python-barcode>=0.15
+
+# --- Image Processing (lightweight) ---
 Pillow>=10.4
+
+# --- Configuration ---
+python-dotenv>=1.0
+
+# --- Data Analysis & Reporting ---
 pandas>=2.0
+fpdf2>=2.7

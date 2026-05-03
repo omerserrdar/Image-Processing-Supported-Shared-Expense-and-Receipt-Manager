@@ -1,9 +1,28 @@
+# Environment & Secrets
+.env
+
+# Python
 .venv/
 __pycache__/
-*.png
-*.jpg
-*.jpeg
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Uploads (keep directory, ignore contents)
+uploads/*
+!uploads/.gitkeep
+
+# IDE
 .idea/
 .vscode/
-receipts.db
-uploads/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated barcodes
+generated_barcodes/

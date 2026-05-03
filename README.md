@@ -1,56 +1,77 @@
-# ReceiptShare Enterprise - AI-Powered Expense & Receipt Manager
+# ReceiptShare v2 — AI-Powered Family Expense & Receipt Manager
 
-ReceiptShare is a high-performance, enterprise-grade expense management system that leverages Artificial Intelligence and Computer Vision to digitize financial records. Designed for teams and individuals, it automates the process of extracting data from physical receipts and provides deep analytical insights.
+> **Scan receipts, share with your family, track spending, protect your warranties.**
 
-## 🚀 Key Features
-- **AI-Powered OCR:** Utilizes PaddleOCR and OpenCV for high-accuracy text extraction from receipts.
-- **Enterprise Dashboard:** A modern, dark-themed UI built with Flet, inspired by premium SaaS aesthetics.
-- **Team Collaboration:** Create teams, invite members, and share expenses seamlessly.
-- **Deep Analytics:** Real-time visualization of spending trends, categorical breakdowns, and budget health.
-- **Robust Database:** Architected on MSSQL for reliable data integrity and relational management.
+## 🚀 Features
+
+- **AI-Powered OCR:** Gemini Vision API extracts store name, date, total, items, and barcodes from receipt images
+- **Family Groups:** Create a family, invite members with temporary or permanent codes
+- **Per-Member Tracking:** See who spent how much per month
+- **Warranty Tracker:** Store barcodes from receipts — show them on your phone at the store
+- **Receipt Merging:** Link store receipts with POS receipts
+- **Analytics:** Daily spending trends, category distribution, member comparison charts
+- **Bilingual:** English + Turkish (switchable in-app)
+- **Modern UI:** Glassmorphism dark theme with smooth animations
 
 ## 🛠 Tech Stack
-- **Frontend:** Python, Flet (UI/UX)
-- **OCR Engine:** PaddleOCR, OpenCV
-- **Backend:** Python 3.12
-- **Database:** Microsoft SQL Server (MSSQL)
-- **Logic:** SQLAlchemy (ORM), Regex-based Data Parsing
 
-## 📋 Database Architecture
-The system consists of 5 core relational tables:
-1. `users`: User identity and security.
-2. `categories`: Visual categorization and UI color mapping.
-3. `receipts`: Central storage for processed financial data and image paths.
-4. `teams`: Group structures for shared spending.
-5. `team_members`: Role-based membership management.
+| Layer | Technology |
+|---|---|
+| Frontend | **NiceGUI** (Python → Vue.js/Quasar) |
+| Backend | **FastAPI** (built into NiceGUI) |
+| AI/OCR | **Google Gemini Vision API** |
+| Database | **MongoDB Atlas** |
+| Auth | **bcrypt** + NiceGUI sessions |
+| Barcode | **python-barcode** |
 
----
+## 📋 Setup
 
-# ReceiptShare Enterprise - Yapay Zeka Destekli Fiş ve Gider Yöneticisi
+### 1. Clone & Install
+```bash
+git clone https://github.com/omerserrdar/Image-Processing-Supported-Shared-Expense-and-Receipt-Manager.git
+cd Image-Processing-Supported-Shared-Expense-and-Receipt-Manager
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-ReceiptShare, finansal kayıtları dijitalleştirmek için Yapay Zeka ve Bilgisayarlı Görü (Computer Vision) teknolojilerini kullanan, yüksek performanslı bir kurumsal gider yönetim sistemidir. Takımlar ve bireyler için tasarlanan bu uygulama, fiziksel fişlerden veri çıkarma sürecini otomatikleştirir ve derinlemesine analitik içgörüler sunar.
+### 2. Configure Environment
+```bash
+cp .env.example .env
+# Edit .env with your actual values:
+# - GEMINI_API_KEY (from Google AI Studio)
+# - MONGODB_URI (from MongoDB Atlas)
+# - SECRET_KEY (any random string)
+```
 
-## 🚀 Öne Çıkan Özellikler
-- **Yapay Zeka Destekli OCR:** Fişlerden yüksek doğrulukla veri çekmek için PaddleOCR ve OpenCV kullanır.
-- **Kurumsal Panel:** Flet ile inşa edilmiş, premium SaaS estetiğinden ilham alan modern karanlık tema arayüzü.
-- **Ekip İş Birliği:** Takımlar oluşturun, üyeleri davet edin ve harcamaları sorunsuz bir şekilde paylaşın.
-- **Derin Analitik:** Harcama trendlerinin, kategorik dökümlerin ve bütçe sağlığının gerçek zamanlı görselleştirilmesi.
-- **Güçlü Veritabanı:** Güvenilir veri bütünlüğü ve ilişkisel yönetim için MSSQL üzerinde yapılandırılmıştır.
+### 3. Run
+```bash
+python app.py
+```
+Open http://localhost:8080 in your browser.
 
-## 🛠 Teknoloji Yığını
-- **Arayüz:** Python, Flet (UI/UX)
-- **OCR Motoru:** PaddleOCR, OpenCV
-- **Backend:** Python 3.12
-- **Veritabanı:** Microsoft SQL Server (MSSQL)
-- **Mantık:** SQLAlchemy (ORM), Regex tabanlı veri işleme
-
-## 📋 Veritabanı Mimarisi
-Sistem 5 temel ilişkisel tablodan oluşmaktadır:
-1. `users`: Kullanıcı kimliği ve güvenliği.
-2. `categories`: Görsel kategorizasyon ve arayüz renk eşleşmeleri.
-3. `receipts`: İşlenmiş finansal verilerin ve resim yollarının merkezi deposu.
-4. `teams`: Ortak harcamalar için grup yapıları.
-5. `team_members`: Rol tabanlı üyelik yönetimi.
+## 📂 Project Structure
+```
+├── app.py              # Main entry point & routing
+├── config.py           # Environment configuration
+├── pages/
+│   ├── login.py        # Login / Register
+│   ├── dashboard.py    # Family overview
+│   ├── scan.py         # Receipt scanning
+│   ├── receipts.py     # Receipt history
+│   ├── analytics.py    # Charts & analytics
+│   ├── family.py       # Family management
+│   └── warranty.py     # Warranty tracker
+├── services/
+│   ├── db_service.py   # MongoDB operations
+│   ├── auth_service.py # Authentication
+│   └── ocr_service.py  # Gemini Vision API
+├── models/schemas.py   # Pydantic data models
+├── theme/style.py      # Design system & CSS
+├── i18n/               # EN + TR translations
+├── uploads/            # Uploaded receipt images
+└── generated_barcodes/ # Generated barcode images
+```
 
 ---
 *Developed by the ReceiptShare Team.*
