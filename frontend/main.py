@@ -17,14 +17,15 @@ import time
 from style_tokens import Style
 from database.db_manager import DatabaseManager
 from receipt_parser import ReceiptParser
+from smart_categorizer import SmartCategorizer
 try:
     from paddleocr import PaddleOCR  # type: ignore
 except Exception:
     PaddleOCR = None
 
 # --- GLOBAL NESNELER | GLOBAL OBJECTS ---
-# TR: OCR motorunu ve veritabanı yöneticisini uygulama genelinde kullanmak için başlatıyoruz.
-# EN: Initializing the OCR engine and database manager for application-wide use.
+# TR: OCR motorunu, veritabanı yöneticisini ve akıllı kategorize ediciyi başlatıyoruz.
+# EN: Initializing the OCR engine, database manager, and smart categorizer.
 ocr_engine = (
     PaddleOCR(
         use_textline_orientation=True, 
@@ -37,6 +38,7 @@ ocr_engine = (
     else None
 )
 receipt_parser = ReceiptParser()
+categorizer = SmartCategorizer()
 db = DatabaseManager() # Veritabanını başlat | Initialize database
 
 
@@ -188,8 +190,12 @@ def main(page: ft.Page):
                 if date == "Not Found" or not date: date = "2026-01-01"
                 total = data.get('total_amount', 0.0)
                 
-                db.add_receipt(store, date, total, "Other")
-                print("DEBUG: Veritabanına kaydedildi.")
+                # TR: Akıllı kategori ataması yap
+                # EN: Perform smart category assignment
+                auto_category = categorizer.get_category(store)
+                
+                db.add_receipt(store, date, total, auto_category)
+                print(f"DEBUG: Veritabanına kaydedildi. Kategori: {auto_category}")
                 
                 # TR: Arayüzü güncelle (Dinamik Grafikler ve Tablo)
                 # EN: Update UI (Dynamic Charts and Table)

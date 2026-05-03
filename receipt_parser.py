@@ -109,9 +109,9 @@ class ReceiptParser:
         excluded = ['FIŞI', 'BELGESI', 'SATIŞ', 'TARIH', 'SAAT', 'IRSALIYE']
         
         for line in lines[:5]: # İlk 5 satıra bak | Check first 5 lines
-            # TR: Sadece harf ve boşlukları temizle | EN: Clean only letters and spaces
-            cleaned = re.sub(r'[^a-zA-Z\sİıĞğÜüŞşÖöçÇ]', '', line).strip()
-            if len(cleaned) > 3 and not any(ex in cleaned.upper() for ex in excluded):
+            # TR: Harf, rakam ve boşlukları temizle | EN: Clean letters, numbers and spaces
+            cleaned = re.sub(r'[^a-zA-Z0-9\sİıĞğÜüŞşÖöçÇ]', '', line).strip()
+            if len(cleaned) >= 2 and not any(ex in cleaned.upper() for ex in excluded):
                 return cleaned
         return "Unknown Store"
 
