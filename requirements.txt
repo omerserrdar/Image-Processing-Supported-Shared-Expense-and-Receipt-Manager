@@ -9,7 +9,7 @@ python-multipart>=0.0.9
 google-genai>=1.0
 
 # --- Database ---
-pymongo>=4.7
+pymongo
 
 # --- Authentication ---
 passlib[bcrypt]>=1.7
@@ -18,7 +18,7 @@ passlib[bcrypt]>=1.7
 python-barcode>=0.15
 
 # --- Image Processing (lightweight) ---
-Pillow>=10.4
+Pillow
 
 # --- Configuration ---
 python-dotenv>=1.0
