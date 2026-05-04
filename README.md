@@ -1,4 +1,4 @@
-# ReceiptShare v2 — AI-Powered Family Expense & Receipt Manager
+# ReceiptShare — AI-Powered Family Expense & Receipt Manager
 
 > **Scan receipts, share with your family, track spending, protect your warranties.**
 
