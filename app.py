@@ -112,7 +112,7 @@ def _sidebar_layout(page_func):
 
                 # TR: Dil degistirici
                 # EN: Language switcher
-                with ui.row().classes("px-4 gap-2 mb-2"):
+                with ui.row().classes("mx-4 mb-4 p-1 rounded-full items-center justify-center gap-0").style(f"background:{Theme.SURFACE}; border: 1px solid {Theme.BORDER}"):
                     def set_lang(code):
                         # TR: Dil tercihini session + DB uzerinde sakla
                         # EN: Persist language in session and DB
@@ -122,8 +122,12 @@ def _sidebar_layout(page_func):
                             db_service.update_user_language(user_id, code)
                         ui.navigate.to(current_path)
 
-                    ui.button("🇬🇧", on_click=lambda: set_lang("en")).props("flat dense round size=sm")
-                    ui.button("🇹🇷", on_click=lambda: set_lang("tr")).props("flat dense round size=sm")
+                    btn_classes = "rounded-full px-4 py-1 text-xs font-bold cursor-pointer transition-colors"
+                    active_style = f"background:{Theme.PRIMARY}; color:{Theme.BG};"
+                    inactive_style = f"background:transparent; color:{Theme.TEXT_MUTED};"
+
+                    ui.label("EN").classes(btn_classes).style(active_style if lang == "en" else inactive_style).on("click", lambda: set_lang("en"))
+                    ui.label("TR").classes(btn_classes).style(active_style if lang == "tr" else inactive_style).on("click", lambda: set_lang("tr"))
 
                 # TR: Cikis aksiyonu
                 # EN: Logout action
